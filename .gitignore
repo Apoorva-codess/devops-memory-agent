@@ -1,6 +1,10 @@
-
 .env
+.env.*
+!.env.example
 .venv/
 __pycache__/
-
-
+*.py[cod]
+.DS_Store
+Terminal Saved Output*.txt
+outputs/
+.streamlit/secrets.toml

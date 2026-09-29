@@ -24,3 +24,5 @@ result = client.recall(
 print("Hindsight connected. Memories found:")
 for memory in result.results:
     print("-", memory.text)
+
+client.close()

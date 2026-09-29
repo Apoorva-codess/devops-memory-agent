@@ -1,4 +1,5 @@
 import os
+from uuid import uuid4
 
 import streamlit as st
 from dotenv import load_dotenv
@@ -28,6 +29,7 @@ def make_hindsight_client():
 with st.sidebar:
     st.header("Demo setup")
     st.write("Add sample deployment history to your Hindsight memory bank.")
+    st.caption("These sample records are simulated, not live production incidents.")
 
     if st.button("Add sample team history"):
         examples = [
@@ -119,6 +121,7 @@ If history is missing, say the advice is generic. Do not invent incidents.
                 "advice": advice,
                 "memories": memories,
                 "baseline": baseline,
+                "run_id": uuid4().hex,
             }
         except Exception as error:
             st.error(f"Could not generate advice: {error}")
@@ -128,6 +131,10 @@ if "latest" in st.session_state:
     latest = st.session_state["latest"]
 
     st.subheader("Release advice")
+    if latest["baseline"]:
+        st.info("Baseline run — Hindsight memory is off.")
+    else:
+        st.info("Memory-informed run — Hindsight recall is on.")
     st.markdown(latest["advice"])
 
     if latest["memories"]:
@@ -142,27 +149,32 @@ if "latest" in st.session_state:
         decision = st.selectbox(
             "What did the engineer decide?",
             ["Followed the advice", "Overrode the advice"],
+            key=f"decision_{latest['run_id']}",
         )
         outcome = st.selectbox(
             "What happened after deployment?",
             ["Not deployed yet", "Succeeded", "Failed or rolled back"],
+            key=f"outcome_{latest['run_id']}",
         )
         saved = st.form_submit_button("Save this experience to memory")
 
     if saved:
-        experience = (
-            f"Deployment experience for {latest['service']}: "
-            f"{latest['release']} "
-            f"Recommendation: {latest['advice']} "
-            f"Engineer decision: {decision}. "
-            f"Deployment outcome: {outcome}."
-        )
+        if outcome == "Not deployed yet":
+            st.info("No outcome saved. Choose an outcome after deployment to add this experience to memory.")
+        else:
+            experience = (
+                f"Deployment experience for {latest['service']}: "
+                f"{latest['release']} "
+                f"Recommendation: {latest['advice']} "
+                f"Engineer decision: {decision}. "
+                f"Deployment outcome: {outcome}."
+            )
 
-        memory_client = make_hindsight_client()
-        try:
-            memory_client.retain(bank_id=bank_id, content=experience)
-            st.success("Saved. PatchPilot can recall this experience next time.")
-        except Exception as error:
-            st.error(f"Could not save this experience: {error}")
-        finally:
-            memory_client.close()
+            memory_client = make_hindsight_client()
+            try:
+                memory_client.retain(bank_id=bank_id, content=experience)
+                st.success("Saved. PatchPilot can recall this experience next time.")
+            except Exception as error:
+                st.error(f"Could not save this experience: {error}")
+            finally:
+                memory_client.close()
